@@ -1,301 +1,104 @@
+# Nonlinear predictors (trees)
 
-# EC 524, Winter 2022
+Let's return to the 2016 election one more time. (It's nice to be able to compare performance across projects.)
 
-Welcome to Economics 524 (424): Prediction and machine-learning in econometrics, taught by [Ed Rubin](https://edrub.in) and [Andrew Dickinson](https://economics.uoregon.edu/profile/adickin3/).
+You will again attempt to predict which party 'won' (received the most votes) for each county in the US during the presidential election of 2016.
 
-## Schedule
+All the data you will need are stored in [`election-2016.csv`](https://raw.githack.com/edrubin/EC524W22/master/projects/project-003/election-2016.csv).
 
-**Lecture** Monday and Wednesday, 10:00a–11:20a (Pacific), [220 Chapman](https://map.uoregon.edu/cd63d45ec)
+*Sources:* As you already know, this dataset combines data from 
 
-**Lab** Friday, 12:00p–12:50p (Pacific), [220 Chapman](https://map.uoregon.edu/cd63d45ec)
+- [a Kaggle project for the 2016 election](https://www.kaggle.com/benhamner/2016-us-election?select=county_facts.csv)
+- [MIT's election data and science lab](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/VOQCHQ).
 
-**Office hours**
+The outcome you are predicting  is `i_republican_2016`. This variable is a simple, binary indicator for whether Republicans won the given county in 2016. 
 
-- **Ed Rubin** Tuesdays, 3:30p–5:00p, [Zoom](https://uoregon.zoom.us/j/99805127132?pwd=NzROS2hCY0ljSGc4SXFOY3RvYm1SUT09)
-- **Andrew Dickinson** Thursdays, 2:00p-3:00p, [Zoom](https://uoregon.zoom.us/j/6669213025)
+**Important:** For true classification **methods** (e.g., logistic regression or whenever you specify `mode = 'classification'`) or **metrics** (e.g., precision), you will need an outcome variable that is `character` or `factor` (not simply a binary numerical variable). So you'll need to add another column to the dataset or transform the current column.
 
+**Note:** As usual, you can work on this project however you like (RStudio, Kaggle, etc.). Just make sure you can submit (on Canvas) a nice document with your answers, R code, and figures. The submission can be a file (e.g., a knitted PDF) or a link (e.g., to a Kaggle notebook or hosted )
 
-## Syllabus
+## Part 1: One tree
 
-[**Syllabus**](https://raw.githack.com/edrubin/EC524W22/master/syllabus/syllabus.pdf)
+**01\.** Using 5-fold cross validation to tune the cost complexity of pruning (and `min_n` if you'd like), train and tune a decision tree (`decision_tree`). Use a real classification metric for tuning (not MSE). Explain which metric you chose and why. (No matter which metric you choose, make sure you also record accuracy.)
 
-## Books
+**02\.** What are the values of the hyperparameters of your best model?
 
-### Required books
+**03\.** What is the accuracy of your best (chosen) tree model? How does it compare to the accuracy of your worst tree model?
 
-- [Introduction to Statistical Learning](https://www-bcf.usc.edu/~gareth/ISL/)
-- [The Hundred-Page Machine Learning Book](http://themlbook.com/)
-- [Data Visualization](https://socviz.co/)
+## Part 2: Bag o' trees
 
-### Suggested books
+**04\.** Now tune bagged ensembles, each with at least 50 trees (`bag_tree()` in `tidymodels`—specifically `baguette`). Cross validate using 5-fold cross validation. Record accuracy.
 
-- [R for Data Science](https://r4ds.had.co.nz/)
-- [Introduction to Data Science](https://www.springer.com/us/book/9783319500164) (not available without purchase)
-- [The Elements of Statistical Learning](http://web.stanford.edu/~hastie/ElemStatLearn/)
-- [Data Science for Public Policy](https://link.springer.com/book/10.1007/978-3-030-71352-2) (not available without purchase)
+**05\.** Which hyperparameters did you tune and which values were chosen?
 
-## Lecture notes
+**06\.** What is the cross-validated accuracy of your best model?
 
-[**000 - Overview (Why predict?)**](https://raw.githack.com/edrubin/EC524W22/master/lecture/000/000-slides.html)
+**07\.** What benefit(s) does an ensemble of bagged trees provide over a single decision tree?
 
-1. Why do we have a class on prediction?
-2. How is prediction (and how are its tools) different from causal inference?
-3. Motivating examples
+## Part 3: Forests
 
-**Formats** [.html](https://raw.githack.com/edrubin/EC524W22/master/lecture/000/000-slides.html) | [.pdf](https://github.com/edrubin/EC524W22/blob/master/lecture/000/000-slides.pdf) | [.Rmd](https://github.com/edrubin/EC524W22/blob/master/lecture/000/000-slides.Rmd)
+**08\.** Tune a random forest (`rand_forest()` in `tidymodels`) model—using 5-fold cross validation. Again: Include at least 50 trees and record accuracy (and any other metrics you're interested in). Tune at least `mtry` and `min_n`.
 
-**Readings** Introduction in *ISL*
+**09\.** What are the values of the hyperparameters of your best model?
 
-[**001 - Statistical learning foundations**](https://raw.githack.com/edrubin/EC524W22/master/lecture/001/001-slides.html)
+**10\.** How does the accuracy of your random forest compare to the accuracy of your bagged-tree model? What does this comparison—and the tuned value of `mtry`—tell you about the importance of decorrelating your trees in this setting?
 
-1. Why do we have a class on prediction?
-2. How is prediction (and how are its tools) different from causal inference?
-3. Motivating examples
+## Part 4: Boosting
 
-**Formats** [.html](https://raw.githack.com/edrubin/EC524W22/master/lecture/001/001-slides.html) | [.pdf](https://github.com/edrubin/EC524W22/blob/master/lecture/001/001-slides.pdf) | [.Rmd](https://github.com/edrubin/EC524W22/blob/master/lecture/001/001-slides.Rmd)
+**11\.** Now boost some trees (`boost_tree()` in `tidymodels`). Using 5-fold cross validation, tune (at least) the tree depth, the learning rate, and the number of trees. Record the accuracy.
 
-**Readings**
+**12\.** Was the optimal set of hyperparameters fairly "fast" at learning? Explain.
 
-- [Prediction Policy Problems](https://www.aeaweb.org/articles?id=10.1257/aer.p20151023) by Kleinberg *et al.* (2015)
-- *ISL* Ch1
-- *ISL* Start Ch2
+## Part 5: Reflection
 
-**Supplements** [Unsupervised character recognization](https://colah.github.io/posts/2014-10-Visualizing-MNIST/)
+**13\.** Compare the accuracy across the 4 sections—and across your previous attempts at predicting election outcomes. Which models did the best? Does relaxing linearity appear to help?
 
-[**002 - Model accuracy**](https://raw.githack.com/edrubin/EC524W22/master/lecture/002/002-slides.html)
+## Part 6: Review
 
-1. Model accuracy
-1. Loss for regression and classification
-1. The variance-bias tradeoff
-1. The Bayes classifier
-1. KNN
+**14\.** Why are boosted-tree ensembles so sensitive to the number of trees (relative to the bagged-tree ensembles and random forests)?
 
-**Formats** [.html](https://raw.githack.com/edrubin/EC524W22/master/lecture/002/002-slides.html) | [.pdf](https://github.com/edrubin/EC524W22/blob/master/lecture/002/002-slides.pdf) | [.Rmd](https://github.com/edrubin/EC524W22/blob/master/lecture/002/002-slides.Rmd)
+**15\.** How do individual decision trees guard against overfitting?
 
-**Readings** 
+**16\.** How do ensembles trade between bias and variance?
 
-- *ISL* Ch2–Ch3
-- *Optional:* *100ML* Preface and Ch1–Ch4
+**17\.** How do trees allow interactions?
 
-[**003 - Resampling methods**](https://raw.githack.com/edrubin/EC524W22/master/lecture/003/003-slides.html)
+## Variable descriptions
 
-1. Review
-1. The validation-set approach
-1. Leave-out-out cross validation
-1. k-fold cross validation
-1. The bootstrap
+For more information on the county demographic variables, see [the source documentation](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/VOQCHQ).
 
-**Formats** [.html](https://raw.githack.com/edrubin/EC524W22/master/lecture/003/003-slides.html) | [.pdf](https://github.com/edrubin/EC524W22/blob/master/lecture/003/003-slides.pdf) | [.Rmd](https://github.com/edrubin/EC524W22/blob/master/lecture/003/003-slides.Rmd)
-
-**Readings**
-
-- *ISL* Ch5
-- *Optional:* *100ML* Ch5
-
-[**004 - Linear regression strikes back**](https://raw.githack.com/edrubin/EC524W22/master/lecture/004/004-slides.html)
-
-1. Returning to linear regression
-1. Model performance and overfit
-1. Model selection—best subset and stepwise
-1. Selection criteria
-
-**Formats** [.html](https://raw.githack.com/edrubin/EC524W22/master/lecture/004/004-slides.html) | [.pdf](https://github.com/edrubin/EC524W22/blob/master/lecture/004/004-slides.pdf) | [.Rmd](https://github.com/edrubin/EC524W22/blob/master/lecture/004/004-slides.Rmd)
-
-**Readings**
-
-- *ISL* Ch3
-- *ISL* Ch6.1
-
-**In between: `tidymodels`-ing**
-
-- [An introduction to preprocessing with `tidymodels`](https://www.kaggle.com/edwardarubin/intro-tidymodels-preprocessing). (Kaggle notebook)
-- [An introduction to modeling with `tidymodels`](https://www.kaggle.com/edwardarubin/intro-tidymodels-modeling). (Kaggle notebook)
-- [An introduction to resampling, model tuning, and workflows with `tidymodels`](https://www.kaggle.com/edwardarubin/intro-tidymodels-resampling) (Kaggle notebook)
-- [Introduction to `tidymodels`: Follow up for Kaggle](https://www.kaggle.com/edwardarubin/intro-tidymodels-split-kaggle)
-
-[**005 - Shrinkage methods**](https://raw.githack.com/edrubin/EC524W22/master/lecture/005/005-slides.html)
-
-(AKA: Penalized or regularized regression)
-
-1. Ridge regression
-1. Lasso
-1. Elasticnet
-
-**Formats** [.html](https://raw.githack.com/edrubin/EC524W22/master/lecture/005/005-slides.html) | [.pdf](https://github.com/edrubin/EC524W22/blob/master/lecture/005/005-slides.pdf) | [.Rmd](https://github.com/edrubin/EC524W22/blob/master/lecture/005/005-slides.Rmd)
-
-**Readings**
-
-- *ISL* Ch4
-- *ISL* Ch6
-
-[**006 - Classification intro**](https://raw.githack.com/edrubin/EC524W22/master/lecture/006/006-slides.html)
-
-1. Introduction to classification
-1. Why not regression?
-1. But also: Logistic regression
-1. Assessment: Confusion matrix, assessment criteria, ROC, and AUC
-
-**Formats** [.html](https://raw.githack.com/edrubin/EC524W22/master/lecture/006/006-slides.html) | [.pdf](https://github.com/edrubin/EC524W22/blob/master/lecture/006/006-slides.pdf) | [.Rmd](https://github.com/edrubin/EC524W22/blob/master/lecture/006/006-slides.Rmd)
-
-**Readings**
-
-- *ISL* Ch4
-
-[**007 - Decision trees**](https://raw.githack.com/edrubin/EC524W22/master/lecture/007/007-slides.html)
-
-1. Introduction to trees
-1. Regression trees
-1. Classification trees—including the Gini index, entropy, and error rate
-
-**Formats** [.html](https://raw.githack.com/edrubin/EC524W22/master/lecture/007/007-slides.html) | [.pdf](https://github.com/edrubin/EC524W22/blob/master/lecture/007/007-slides.pdf) | [.Rmd](https://github.com/edrubin/EC524W22/blob/master/lecture/007/007-slides.Rmd)
-
-**Readings**
-
-- *ISL* Ch8.1–Ch8.2
-
-[**008 - Ensemble methods**](https://raw.githack.com/edrubin/EC524W22/master/lecture/008/008-slides.html)
-
-1. Introduction
-1. Bagging
-1. Random forests
-1. Boosting
-
-**Formats** [.html](https://raw.githack.com/edrubin/EC524W22/master/lecture/008/008-slides.html) | [.pdf](https://github.com/edrubin/EC524W22/blob/master/lecture/008/008-slides.pdf) | [.Rmd](https://github.com/edrubin/EC524W22/blob/master/lecture/008/008-slides.Rmd)
-
-**Readings**
-
-- *ISL* Ch8.2
-
-[**009 - Support vector machines**](https://raw.githack.com/edrubin/EC524W22/master/lecture/009/009-slides.html)
-
-1. Hyperplanes and classification
-2. The maximal margin hyperplane/classifier
-3. The support vector classifier
-4. Support vector machines
-
-**Formats** [.html](https://raw.githack.com/edrubin/EC524W22/master/lecture/009/009-slides.html) | [.pdf](https://github.com/edrubin/EC524W21/blob/master/lecture/009/009-slides.pdf) | [.Rmd](https://github.com/edrubin/EC524W22/blob/master/lecture/009/009-slides.Rmd)
-
-**Readings**
-
-- *ISL* Ch9
-
-[**010 - Dimensionality reduction and unsupervised learning**](https://raw.githack.com/edrubin/EC524W22/master/lecture/010/010-notebook.html)
-
-0. MNIST dataset (machines with vision)
-1. *K*-means clustering
-2. Principal component analysis (PCA)
-3. UMAP
-
-**Formats** [.html](https://raw.githack.com/edrubin/EC524W22/master/lecture/010/010-notebook.html) | [.pdf](https://github.com/edrubin/EC524W22/blob/master/lecture/010/010-notebook.pdf) | [.Rmd](https://github.com/edrubin/EC524W22/blob/master/lecture/010/010-notebook.Rmd)
-
-## Projects
-
-Planned projects
-
-**000** [Predicting sales price in housing data (Kaggle)](https://github.com/edrubin/EC524W22/tree/master/projects/project-000)
-
-**Help:** 
-
-- [A simple example/walkthrough](https://www.kaggle.com/edwardarubin/project-000-example)
-- [Kaggle notebooks](https://rpubs.com/Clennon/KagNotes) (from Connor Lennon)
-
-**001** [Validation and out-of-sample performance](https://github.com/edrubin/EC524W22/tree/master/projects/project-001)
-
-**002** [Penalized regression, logistic regression, and classification](https://github.com/edrubin/EC524W22/tree/master/projects/project-002)
-
-**003** [Nonlinear predictors](https://github.com/edrubin/EC524W22/tree/master/projects/project-003)
-
-**004** [Image/multi-class classification (MNIST)](https://github.com/edrubin/EC524W22/tree/master/projects/project-004)
-
-## Class project
-
-[Outline of the project](https://github.com/edrubin/EC524W22/tree/master/projects/class-project)
-
-**Topic and group due by February 16th**.
-
-**Final project submission due by midnight on March 9th.**
-
-## Lab notes
-
-Approximate/planned topics...
-
-[**000 - Workflow and cleaning**](https://raw.githack.com/edrubin/EC524W22/master/lab/000-cleaning/000-slides.html)
-
-1. General "best practices" for coding
-2. Working with RStudio
-3. The pipe (`%>%`)
-4. Cleaning and Kaggle follow up
-
-**Formats** [.html](https://raw.githack.com/edrubin/EC524W22/master/lab/000-cleaning/000-slides.html) | [.pdf](https://raw.githack.com/edrubin/EC524W22/master/lab/000-cleaning/000-slides.pdf) | [.Rmd](https://raw.githack.com/edrubin/EC524W22/master/lab/000-cleaning/000-slides.Rmd)
-
-[**001 - Workflow and cleaning**](https://raw.githack.com/edrubin/EC524W22/master/lab/001-cleaning/001-markdown.html) (continued)
-
-1. Finish previous lab on `dplyr`
-2. Working with projects
-3. Using `dpylr` and `ggplot2` to make insightful visuals
-4. How to fix a coding error
-
-Housing data [download](https://github.com/edrubin/EC524W22/raw/master/lab/001-cleaning/data/house-prices-advanced-regression-techniques.zip)
-
-**Formats** [.html](https://raw.githack.com/edrubin/EC524W22/master/lab/001-cleaning/001-markdown.html) | [.Rmd](https://raw.githack.com/edrubin/EC524W22/master/lab/001-cleaning/001-markdown.Rmd)
-
-[**002 - Validation**](https://raw.githack.com/edrubin/EC524W22/master/lab/002-validation/R/002-validation.html)
-
-1. Creating a training and validation data set from your observations dataframe in R
-2. Writing a function to iterate over multiple models to test and compare MSEs
-
-**Formats** [.html](https://raw.githack.com/edrubin/EC524W22/master/lab/002-validation/R/002-validation.html) | [.Rmd](https://raw.githack.com/edrubin/EC524W22/master/lab/002-validation/R/002-validation.Rmd)
-
-[**003 - Practice using `tidymodels`**](https://www.kaggle.com/edwardarubin/intro-tidymodels-preprocessing)
-
-1. Cleaning data quickly and efficiently with `tidymodels`
-
-**Formats** [.html](https://www.kaggle.com/edwardarubin/intro-tidymodels-preprocessing)
-
-[**004 - Practice using `tidymodels`**](https://www.kaggle.com/edwardarubin/intro-tidymodels-preprocessing) (continued)
-
-1. [An introduction to preprocessing with `tidymodels`](https://www.kaggle.com/edwardarubin/intro-tidymodels-preprocessing) (refresher from last week) 
-2. [An introduction to modeling with `tidymodels`](https://www.kaggle.com/edwardarubin/intro-tidymodels-modeling)
-3. [An introduction to resampling, model tuning, and workflows with `tidymodels`](https://www.kaggle.com/edwardarubin/intro-tidymodels-resampling) (will finish up next week)
-
-**005 - Summarizing `tidymodels`**
-
-1. Summarizing `tidymodels`
-2. [Combining pre-split data together and then defining a custom split](https://www.kaggle.com/edwardarubin/intro-tidymodels-split-kaggle)
-
-
-[**006 - Penalized regression in `tidymodels` + functions + loops**](https://raw.githack.com/edrubin/EC524W22/master/lab/006-function_loops/006_functions_loops.html)
-
-1. Running a Ridge, Lasso or Elasticnet logistic regression in `tidymodels`.
-2. [A short lesson in writing functions and loops in R)](https://raw.githack.com/edrubin/EC524W22/master/lab/006-function_loops/006_functions_loops.html)
-
-[**007 - Finalizing a workflow in `tidymodels`: Example using a random forest**](https://raw.githack.com/edrubin/EC524W22/master/lab/007-finalize/finalize_wf.html)
-
-1. [Finalizing a workflow in `tidymodels`: Example using a random forest](https://raw.githack.com/edrubin/EC524W22/master/lab/007-finalize/finalize_wf.html)
-2. [A short lesson in writing functions and loops in R (continued)](https://raw.githack.com/edrubin/EC524W22/master/lab/006-function_loops/006_functions_loops.html)
-
-
-## Additional resources
-
-### R
-
-- [RStudio's recommendations for learning R](https://education.rstudio.com/learn/), plus cheatsheets, books, and tutorials
-- [YaRrr! The Pirate’s Guide to R](https://bookdown.org/ndphillips/YaRrr/) (free online)
-- [UO library resources/workshops](http://uoregon.libcal.com/calendar/dataservices/?cid=11979&t=g&d=0000-00-00&cal=11979,11173)
-- [Eugene R Users](https://www.meetup.com/meetup-group-cwPiAlnB/)
-
-### Data Science
-
-- [Python Data Science Handbook](https://jakevdp.github.io/PythonDataScienceHandbook/) by Jake VanderPlas
-- [Elements of AI](https://course.elementsofai.com/)
-- [Caltech professor Yaser Abu-Mostafa: Lectures about machine learning on YouTube](https://www.youtube.com/user/caltech/search?query=Yaser+Abu-Mostafa)
-- From Google:
-  - [Machine-learning crash course](https://developers.google.com/machine-learning/crash-course/ml-intro)
-  - [Google Cloud training for data and machine learning](https://cloud.google.com/training/data-ml)
-  - [General Google education platform](https://ai.google/education/)
-
-### Spatial data
-
-- [Geocomputation with R](https://geocompr.robinlovelace.net) (free online)
-- [Spatial Data Science](https://keen-swartz-3146c4.netlify.com) (free online)
-- [Applied Spatial Data Analysis with R](https://asdar-book.org)
+| Variable name | Description | Type |
+|:----|:----|:---:|
+| `fips`                   | FIPS code (unique for a county)                             | `int` |
+| `county`                 | County name                                                 | `chr` |
+| `state`                  | State name                                                  | `chr` |
+| `i_republican_2016`      | Repub. presidential candidate won county in 2016            | `int` |
+| `n_votes_republican_2012`| Number of votes for Repub. presid. candidate in 2012        | `int` |
+| `n_votes_democrat_2012`  | Number of votes for Democ. presid. candidate in 2012        | `int` |
+| `n_votes_other_2012`     | Number of votes for other parties' candidates in 2012       | `int` |
+| `n_votes_total_2012`     | Number of votes in presidential election in 2012            | `int` |
+| `i_republican_2012`      | Repub. presidential candidate won county in 2012            | `int` |
+| `pop`                    | County population                                           | `int` |
+| `pop_pct_change`         | County percent population change 2010-2014                  | `num` |
+| `pop_pct_below18`        | County percent population below 18 years of age             | `num` |
+| `pop_pct_above65`        | County percent population above 65 years of age             | `num` |
+| `pop_pct_female`         | County percent population female                            | `num` |
+| `pop_pct_asian`          | County percent population Asian                             | `num` |
+| `pop_pct_black`          | County percent population Black                             | `num` |
+| `pop_pct_native`         | County percent population Am. Indian/Al. Native             | `num` |
+| `pop_pct_pacific`        | County percent population Native Haw./Other Pac. Islander   | `num` |
+| `pop_pct_white`          | County percent population White                             | `num` |
+| `pop_pct_multiracial`    | County percent population multi-racial                      | `num` |
+| `pop_pct_hispanic`       | County percent population Hispanic                          | `num` |
+| `pop_pct_foreign`        | County percent population born outside US                   | `num` |
+| `pop_pct_nonenglish`     | County percent population that speaks non-English lang.     | `num` |
+| `pop_pct_bachelors`      | County percent population with Bachelors degree             | `num` |
+| `pop_pct_veteran`        | County percent population who are veterans                  | `num` |
+| `pop_pct_homeowner`      | County percent population homeowners                        | `num` |
+| `pop_pct_poverty`        | County percent population below the poverty line            | `num` |
+| `home_median_value`      | County median value of owner-occupied housing units         | `num` |
+| `persons_per_hh`         | County average persons per household                        | `num` |
+| `income_pc`              | County per capita income                                    | `int` |
+| `income_median_hh`       | County median household income                              | `int` |
+| `n_firms`                | County number of firms                                      | `int` |
+| `land_area_mi2`          | County land area (square miles)                             | `num` |
