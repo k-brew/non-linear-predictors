@@ -1,0 +1,354 @@
+##DISCLUDING
+```{r runs, eval=FALSE}
+# using ipred package
+train_1 %<>% mutate(state = as.factor(state),
+                    i_republican_2016 = as.factor(i_republican_2016),
+                    i_republican_2012 = as.factor(i_republican_2012))
+
+bag_mod = bagging(i_republican_2016 ~ .,
+          data = train_1,
+          nbagg = 10,
+          coob = TRUE,
+          control = rpart.control(minsplit = 2, cp = 0, xval = 0))
+
+train_1$pred = predict(bag_mod, newdata=train_1, type="prob")
+```
+
+
+```{r eval=FALSE, bago trees}
+# Defining recipe
+p_load(party)
+default_recipe_bago = recipe(i_rep_2016_ind ~., data = train_election_data) %>%
+  step_medianimpute(all_predictors()&all_numeric())%>%
+  step_modeimpute(all_predictors()&all_nominal())
+
+bago_predictors <- train2_election_data %>% select(c("i_rep_2016_ind"))
+bago_variables <- train2_election_data %>% select(-c("i_republican_2016",
+                                                     "pred_prob",
+                                                     "predictions"))
+
+# Using caret because baguette was not working
+treebag = bag(x= bago_variables,y =bago_predictors,
+              bagControl = bagControl(fit = ctreeBag$fit,
+                                      predict = ctreeBag$pred,
+                                      aggregate = ctreeBag$aggregate),
+              trControl = trainControl(method = "oob"))
+
+
+# Defining our next decision tree slightly differently
+default__bago = baguette::bag_tree(mode ="classification",
+                             cost_complexity = 0,
+                             tree_depth = NULL,
+                             min_n =2,
+                             class_cost = NULL) %>%
+  set_engine(
+    engine = "rpart",
+    times = 50)
+bag
+# Defining workflow
+default_flow_bago = workflow() %>%
+  add_model(default_tree) %>%
+  add_recipe(default_recipe_bago)
+# Tuning
+default_cv_fit_bago = default_flow %>%
+  tune_grid(
+    default_cv,
+    grid = expand_grid(
+      cost_complexity = seq(0, 0.15, by = 0.01),
+      tree_depth = c(1,2,5,10),
+    ),
+    metrics = metric_set(accuracy, roc_auc)
+  )
+# Fitting the best model
+best_flow_bago = default_flow_bago %>%
+  finalize_workflow(select_best(default_cv_fit_bago, metric = "accuracy")) %>%
+  fit(data = train2_election_data)
+# Choosing the best model
+best_tree_bago = best_flow_bago %>% extract_fit_parsnip()
+# Plotting the tree
+best_tree_bago$fit %>% rpart.plot()
+```
+
+
+
+```{r single tree}
+# Planting trees
+  ## Below was the default selection made by the algorithm
+elect_full_trees <- rpart(formula = i_rep_2016_ind ~ .,
+                       data = train_election_data,
+                       method = "class",  # classification (not regression)
+                       xval = 5  # 5-fold cross-validation 
+                       )
+rpart.plot(elect_full_trees, yesno = TRUE)
+plotcp(elect_full_trees)
+
+elect_prev_reg_trees <- rpart(formula = i_rep_2016_ind ~ 
+                          intrxt_var +
+                          n_dem_var+
+                          i_republican_2012,
+                       data = train_election_data,
+                       method = "class",  # classification (not regression)
+                       xval = 5  # 5-fold cross-validation 
+                       )
+rpart.plot(elect_prev_reg_trees, yesno = TRUE)
+plotcp(elect_prev_reg_trees)
+
+test_election_data$tree_pred_values <- predict(
+  elect_prev_reg_trees, test_election_data, type = "vector")
+
+test_election_data=test_election_data %>%
+  mutate(tree_pred_ind = if_else(tree_pred_values == 2,
+                                  "Rep_Major", "Dem_Major"))
+
+```
+
+# Part 2: Bag o' Trees 
+
+We can reuse some of the coding that we had done before, but with a different approach
+```{r packages bago}
+p_load(rpart, parsnip, yardstick)
+library(baguette)
+```
+
+```{r eval=FALSE, bago trees}
+# Defining recipe
+p_load(party)
+default_recipe_bago = recipe(i_rep_2016_ind ~., data = train_election_data) %>%
+  step_medianimpute(all_predictors()&all_numeric())%>%
+  step_modeimpute(all_predictors()&all_nominal())
+
+bago_predictors <- train2_election_data %>% select(c("i_rep_2016_ind"))
+bago_variables <- train2_election_data %>% select(-c("i_republican_2016",
+                                                     "pred_prob",
+                                                     "predictions"))
+
+# Using caret because baguette was not working
+treebag = bag(x= bago_variables,y =bago_predictors,
+              bagControl = bagControl(fit = ctreeBag$fit,
+                                      predict = ctreeBag$pred,
+                                      aggregate = ctreeBag$aggregate),
+              trControl = trainControl(method = "oob"))
+
+
+# Defining our next decision tree slightly differently
+default__bago = baguette::bag_tree(mode ="classification",
+                             cost_complexity = 0,
+                             tree_depth = NULL,
+                             min_n =2,
+                             class_cost = NULL) %>%
+  set_engine(
+    engine = "rpart",
+    times = 50)
+bag
+# Defining workflow
+default_flow_bago = workflow() %>%
+  add_model(default_tree) %>%
+  add_recipe(default_recipe_bago)
+# Tuning
+default_cv_fit_bago = default_flow %>%
+  tune_grid(
+    default_cv,
+    grid = expand_grid(
+      cost_complexity = seq(0, 0.15, by = 0.01),
+      tree_depth = c(1,2,5,10),
+    ),
+    metrics = metric_set(accuracy, roc_auc)
+  )
+# Fitting the best model
+best_flow_bago = default_flow_bago %>%
+  finalize_workflow(select_best(default_cv_fit_bago, metric = "accuracy")) %>%
+  fit(data = train2_election_data)
+# Choosing the best model
+best_tree_bago = best_flow_bago %>% extract_fit_parsnip()
+# Plotting the tree
+best_tree_bago$fit %>% rpart.plot()
+```
+
+# Part 3: Forests
+
+```{r}
+p_load(ranger, tidymodels, parsnip, randomForest, party)
+
+# Defining parameter grid
+forest_grid = expand_grid(
+  mtry = 1:13,
+  min_n = 1:15
+)
+
+# Writing function given hyper parameters
+frst_fcnt_i = function(i) {
+# Define the decision tree
+woodlands_i = rand_forest(mode ="classification",
+                             min_n =forest_grid$min_n[i],
+                             trees = 50,
+                             mtry = forest_grid$mtry[i]) %>%
+  set_engine(engine = "ranger", splitrule = "gini")
+# Defining workflow
+forest_flow_i = workflow() %>%
+  add_model(woodlands) %>%
+  add_recipe(default_recipe)
+
+# Fitting
+forest_rf_fit_i = forest_flow %>%
+  fit(train2_election_data)
+tibble(
+  mtry = forest_grid$mtry[i],
+  min_n = forest_grid$min_n[i],
+  error_oob = forest_rf_fit_i$fit$fit$fit$prediction.error
+)
+}
+
+
+frst_fcnt_i()
+library(parallel)
+library(data.table)
+# Fitting the Random Forests
+forest_tunage = mclapply(
+  X = 1:nrow(forest_grid),
+  FUN = frst_fcnt_i) 
+
+
+```
+
+```{r message=FALSE, warning=FALSE}
+library(randomForest)
+train2_election_data$i_rep_2016_ind = is.factor(train2_election_data$i_rep_2016_ind)
+rf = randomForest(i_rep_2016_ind ~.,data = train2_election_data)
+
+
+```
+
+```{r}
+woodlands_i = rand_forest(mode ="classification",
+                             min_n =forest_grid$min_n[i],
+                             trees = 50,
+                             mtry = forest_grid$mtry[i]) %>%
+  set_engine(engine = "ranger", splitrule = "gini")
+# Defining workflow
+forest_flow_i = workflow() %>%
+  add_model(woodlands_i) %>%
+  add_recipe(default_recipe)
+
+library(rminer)
+forest_rf_fit_i = forest_flow_i %>%
+  fit(i_rep_2016, data = train2_election_data, formula = i_rep_2016_ind ~., model = "randomForest") %>%
+  metrics = metric_set(accuracy, roc_auc)
+  
+# Fitting the best model
+best_rf_flow = forest_flow_i %>%
+  finalize_workflow(select_best(forest_fitted, metric = "accuracy")) %>%
+  fit(data = train2_election_data)
+# Choosing the best model
+best_rf = best_rf_flow %>% extract_fit_parsnip()
+# Plotting the tree
+best_rf$fit %>% rpart.plot()
+```
+
+```{r}
+test2_election_data$i_rep_2016_ind = is.factor(test2_election_data$i_rep_2016_ind)
+
+rpart.plot(rf)
+```
+
+# Part 4: Boosting
+```{r boosting w/ state, warning=FALSE}
+p_load(gbm,caret)
+
+train_boosting = train_election_data %>% 
+  select(-c("county","pred_prob","i_rep_2016_ind")) %>%
+  mutate(state = as.factor(state),
+         i_republican_2016  = as.factor(i_republican_2016))
+test_boosting = test_election_data %>% 
+  select(-c("county","pred_prob","i_rep_2016_ind")) %>%
+  mutate(state = as.factor(state),
+         i_republican_2016  = as.factor(i_republican_2016))
+
+model_gbm = gbm(i_republican_2016~.,
+                data = train_boosting,
+                distribution = 'multinomial',
+                cv.folds = 10,
+                shrinkage = 0.01,
+                n.minobsinnode = 2,
+                n.trees = 100)
+summary(model_gbm)
+
+
+test_boosting$boosting_pred = predict.gbm(object = model_gbm,
+                   newdata = test_boosting,
+                   n.trees = 100,           
+                   type = "response")
+```
+
+```{r boosting w/o state, warning=FALSE}
+train_boosting2 = train_boosting %>% 
+  select(-c("state")) 
+test_boosting2 = test_boosting %>% 
+  select(-c("state"))
+
+model_gbm2 = gbm(i_republican_2016~.,
+                data = train_boosting2,
+                distribution = 'multinomial',
+                cv.folds = 10,
+                shrinkage = 0.01,
+                n.minobsinnode = 2,
+                n.trees = 100)
+summary(model_gbm2)
+test_boosting$boosting_pred2 = predict.gbm(object = model_gbm2,
+                   newdata = test_boosting2,
+                   n.trees = 100,           
+                   type = "response")
+```
+# Part 5: Reflection
+
+***
+
+# Fitting the best model
+best_flow = default_flow %>%
+  finalize_workflow(select_best(default_cv_fit, metric = "accuracy")) %>%
+  fit(data = train_1)
+
+# Choosing the best model
+best_tree = best_flow %>% extract_fit_parsnip()
+
+# Plotting the tree
+best_tree$fit %>% rpart.plot::rpart.plot(roundint=F)
+
+# Printing summary statistics
+printcp(best_tree$fit)
+best_tree$fit$variable.importance
+
+
+
+# Part 2: Bag o' Trees 
+
+```{r eval=FALSE}
+# Recipe to clean data (impute NAs)
+bag_recipe = recipe(i_republican_2016 ~., data = train_1) %>%
+   step_medianimpute(all_predictors() & all_numeric()) %>%
+   step_modeimpute(all_predictors() & all_nominal())
+
+# Define the bagged tree model
+bag_mod = bag_tree(
+      mode = "classification",
+      cost_complexity = 0,
+      tree_depth = NULL,
+      min_n = 2,
+      class_cost = NULL) %>%
+   set_engine(engine = "rpart",times = 100)
+
+# Define workflow
+bag_wf = workflow() %>%
+   add_model(bag_mod) %>%
+   add_recipe(bag_recipe)
+
+# Fit/assess with CV
+bag_fit = bag_wf %>%
+   fit(train_1)
+
+# Printing summary statistics
+bag_fit$fit$variable.importance
+summary(bag_fit)
+
+summarise(bag_fit)
+```
+
